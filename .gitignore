@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# Environment and sensitive keys
+.env
+.env.*
+*.key
+*.pem
+
+# Database & Vault files (Never commit real legal or banking vaults)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+forensic_vault.db
+
+# Output artifacts and scans
+output/
+*.png
+*.jpg
+*.jpeg
+
+# Sensitive PDFs & Legal Briefs (allow only the synthetic test fixture)
+*.pdf
+!tests/fixtures/bancoposta_sample.pdf
+
+# OCR binaries
+tessdata/*.traineddata
+
+# Local private backup
+private_cases_local/

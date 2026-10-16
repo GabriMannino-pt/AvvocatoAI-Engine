@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVVOCATO_AI — OCR Forense Bancario & Legal Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --bg-card: #1e293b;
+            --bg-elevated: #334155;
+            --border: #475569;
+            --primary: #38bdf8;
+            --primary-hover: #0284c7;
+            --accent: #818cf8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --mono-font: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .logo { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+        .badge {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Side: Document View & Provenance */
+        .viewer-pane {
+            flex: 1.1;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: #090d16;
+            overflow: hidden;
+        }
+        .viewer-header {
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        .canvas-wrapper {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            position: relative;
+        }
+        #docCanvas {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .crop-preview-box {
+            padding: 14px 18px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .crop-img {
+            max-height: 55px;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        /* Right Side: Data, Anomalies, Legal & Report */
+        .data-pane {
+            flex: 1.4;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            overflow: hidden;
+        }
+        .tabs-nav {
+            display: flex;
+            background: #131b2e;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab-btn {
+            padding: 12px 18px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px;
+            display: none;
+        }
+        .tab-content.active { display: block; }
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+        }
+        .select-filter {
+            padding: 8px 12px;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        /* Table */
+        .table-responsive {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
+        th {
+            background: #172033;
+            padding: 10px 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #293548;
+        }
+        tr:hover { background: rgba(56, 189, 248, 0.05); cursor: pointer; }
+        tr.selected { background: rgba(56, 189, 248, 0.18) !important; outline: 1px solid var(--primary); }
+
+        .amt-debit { color: #f87171; font-weight: 600; font-family: var(--mono-font); }
+        .amt-credit { color: #34d399; font-weight: 600; font-family: var(--mono-font); }
+        .amt-balance { color: #38bdf8; font-family: var(--mono-font); }
+
+        .tag-atm { background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px; }
+        .tag-cassa { background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px; }
+        .tag-pension { background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px; }
+
+        /* Anomaly cards */
+        .anomaly-card {
+            background: #1e293b;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--warning);
+            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .anomaly-card.CRITICAL { border-left-color: var(--danger); }
+        .anomaly-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .anomaly-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px; }
+        .anomaly-action { background: #0f172a; padding: 8px 12px; border-radius: 4px; font-size: 11px; color: #cbd5e1; }
+
+        /* Report Preview */
+        .report-view {
+            background: #0b1120;
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            font-size: 13px;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 480px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .btn {
+            background: var(--primary);
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--bg-elevated); color: #fff; margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="logo">⚖️ AVVOCATO_AI</div>
+            <span class="badge">OCR FORENSE & LEGAL INTELLIGENCE</span>
+        </div>
+        <div style="display: flex; gap: 14px; align-items: center;">
+            <input type="file" id="pdfUploadInput" accept=".pdf" style="display: none;">
+            <button class="btn" onclick="document.getElementById('pdfUploadInput').click()">📁 Ingestione PDF Bancario</button>
+            <div id="caseStatusBadge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">PRONTO</div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Left: Image Viewer & Provenance -->
+        <div class="viewer-pane">
+            <div class="viewer-header">
+                <div><strong>Fonte Primaria Scansionata:</strong> <span id="lblDocName" style="color: var(--primary);">Nessun documento caricato</span></div>
+                <div id="lblPageIndicator">Pagina 1 di 1</div>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="docCanvas"></canvas>
+            </div>
+            <div class="crop-preview-box">
+                <img id="cropImg" class="crop-img" src="" alt="Ritaglio forense">
+                <div style="font-size: 12px;">
+                    <div><strong>Ritaglio Bounding Box:</strong> <span id="lblBboxCoords" style="font-family: var(--mono-font); color: var(--accent);">[X: 0, Y: 0, W: 0, H: 0]</span></div>
+                    <div style="color: var(--text-muted); margin-top: 3px;">OCR Grezzo: <span id="lblRawOcr" style="color: #fff; font-family: var(--mono-font);">-</span></div>
+                </div>
+                <button class="btn btn-secondary" style="margin-left: auto;" onclick="openCorrectionModal()">✏️ Modifica Peritale</button>
+            </div>
+        </div>
+
+        <!-- Right: Tabbed Analysis -->
+        <div class="data-pane">
+            <div class="tabs-nav">
+                <button class="tab-btn active" onclick="switchTab('tabTransactions')">📊 Movimenti Estratti (<span id="cntTx">0</span>)</button>
+                <button class="tab-btn" onclick="switchTab('tabAnomalies')">⚠️ Anomalie & Pattern (<span id="cntAnom">0</span>)</button>
+                <button class="tab-btn" onclick="switchTab('tabLegal')">⚖️ Quadro Giuridico</button>
+                <button class="tab-btn" onclick="switchTab('tabRequests')">📋 Richieste Documentali</button>
+                <button class="tab-btn" onclick="switchTab('tabReport')">📜 Perizia Forense</button>
+            </div>
+
+            <!-- Tab 1: Transactions -->
+            <div id="tabTransactions" class="tab-content active">
+                <div class="filter-bar">
+                    <input type="text" id="txtSearch" class="search-input" placeholder="🔍 Cerca per data, descrizione, importo..." onkeyup="filterTransactions()">
+                    <select id="selChannelFilter" class="select-filter" onchange="filterTransactions()">
+                        <option value="ALL">Tutti i Canali</option>
+                        <option value="ATM">ATM / Sportello Automatico</option>
+                        <option value="SPORTELLO_FISICO">Sportello Fisico / Cassa</option>
+                        <option value="PENSION_CREDIT">Accredito Pensione</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="transactionsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data Cont.</th>
+                                <th>Descrizione</th>
+                                <th>Addebito (€)</th>
+                                <th>Accredito (€)</th>
+                                <th>Saldo (€)</th>
+                                <th>Canale Forense</th>
+                                <th>Conf.</th>
+                                <th>Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody id="txTableBody">
+                            <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">Carica un PDF bancario per avviare l'analisi forense multilivello.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Anomalies -->
+            <div id="tabAnomalies" class="tab-content">
+                <div id="anomaliesContainer">
+                    <div style="color: var(--text-muted); text-align: center; padding: 40px;">Nessuna anomalia rilevata.</div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Legal -->
+            <div id="tabLegal" class="tab-content">
+                <div id="legalContainer">
+                    <div style="color: var(--text-muted); text-align: center; padding: 40px;">Nessuna ipotesi giuridica formulata.</div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Requests -->
+            <div id="tabRequests" class="tab-content">
+                <div id="requestsContainer">
+                    <div style="color: var(--text-muted); text-align: center; padding: 40px;">Nessuna richiesta documentale generata.</div>
+                </div>
+            </div>
+
+            <!-- Tab 5: Report -->
+            <div id="tabReport" class="tab-content">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                    <h3>Relazione Tecnico-Peritale (Conforme CTU/CTP in 20 Sezioni)</h3>
+                    <button class="btn" onclick="downloadReport()">📥 Esporta Markdown</button>
+                </div>
+                <div id="reportContainer" class="report-view">La relazione verrà generata al termine dell'analisi.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Correzione Peritale -->
+    <div id="correctionModal" class="modal-backdrop">
+        <div class="modal">
+            <h3 style="margin-bottom: 14px; color: var(--primary);">Correzione Peritale Forense</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                Regola di Custodia: La correzione umana viene registrata nell'Audit Trail con timestamp, perito e motivazione, senza sovrascrivere l'OCR grezzo.
+            </p>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; color: var(--text-muted);">Campo da Correggere:</label>
+                <select id="corrField" class="search-input" style="width: 100%; margin-top: 4px;">
+                    <option value="amount_debit">Importo Addebito (Dare)</option>
+                    <option value="amount_credit">Importo Accredito (Avere)</option>
+                    <option value="balance">Saldo</option>
+                    <option value="date_accounting">Data Contabile</option>
+                    <option value="description">Descrizione Operazione</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; color: var(--text-muted);">Nuovo Valore Accertato sull'Immagine:</label>
+                <input type="text" id="corrValue" class="search-input" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; color: var(--text-muted);">Motivazione Peritale / Riferimento Prova:</label>
+                <input type="text" id="corrReason" class="search-input" style="width: 100%; margin-top: 4px;" value="Riscontro visivo diretto su crop ad alta risoluzione 600 DPI">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeCorrectionModal()">Annulla</button>
+                <button class="btn" onclick="submitCorrection()">Salva nell'Audit Trail</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCaseData = null;
+        let selectedTx = null;
+        let docImage = new Image();
+
+        // Handle file upload
+        document.getElementById('pdfUploadInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('caseStatusBadge').innerText = "ELABORAZIONE MULTI-STADIO IN CORSO...";
+            document.getElementById('caseStatusBadge').style.color = "#f59e0b";
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!resp.ok) throw new Error("Errore durante l'elaborazione del file");
+                currentCaseData = await resp.json();
+                renderCase(currentCaseData);
+                document.getElementById('caseStatusBadge').innerText = "ANALISI COMPLETATA";
+                document.getElementById('caseStatusBadge').style.color = "#34d399";
+            } catch (err) {
+                alert(err.message);
+                document.getElementById('caseStatusBadge').innerText = "ERRORE";
+                document.getElementById('caseStatusBadge').style.color = "#ef4444";
+            }
+        });
+
+        function renderCase(c) {
+            if (!c || !c.transactions) return;
+            document.getElementById('lblDocName').innerText = c.documents[0] || "documento.pdf";
+            document.getElementById('cntTx').innerText = c.transactions.length;
+            document.getElementById('cntAnom').innerText = c.anomalies ? c.anomalies.length : 0;
+
+            renderTable(c.transactions);
+            renderAnomalies(c.anomalies || []);
+            renderLegal(c.legal_hypotheses || []);
+            renderRequests(c.document_requests || []);
+            loadReportMarkdown();
+
+            if (c.transactions.length > 0) {
+                selectTransaction(c.transactions[0].id);
+            }
+        }
+
+        function renderTable(txList) {
+            const tbody = document.getElementById('txTableBody');
+            tbody.innerHTML = "";
+
+            txList.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.id = "row_" + t.id;
+                tr.onclick = () => selectTransaction(t.id);
+
+                let channelTag = `<span class="tag-atm">${t.channel}</span>`;
+                if (t.channel === "SPORTELLO_FISICO") channelTag = `<span class="tag-cassa">SPORTELLO FISICO</span>`;
+                if (t.transaction_type === "PENSION_CREDIT") channelTag = `<span class="tag-pension">PENSIONE INPS</span>`;
+
+                tr.innerHTML = `
+                    <td style="font-family: var(--mono-font); font-weight: 600;">${t.id}</td>
+                    <td>${t.date_accounting || '-'}</td>
+                    <td>${t.description}</td>
+                    <td class="amt-debit">${t.amount_debit ? '€' + t.amount_debit.toFixed(2) : '-'}</td>
+                    <td class="amt-credit">${t.amount_credit ? '€' + t.amount_credit.toFixed(2) : '-'}</td>
+                    <td class="amt-balance">${t.balance ? '€' + t.balance.toFixed(2) : '-'}</td>
+                    <td>${channelTag}</td>
+                    <td><span style="color: ${t.confidence_score >= 80 ? '#34d399' : '#f59e0b'}; font-weight: 600;">${Math.round(t.confidence_score)}%</span></td>
+                    <td><span class="badge" style="font-size: 10px;">${t.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectTransaction(txId) {
+            if (!currentCaseData) return;
+            const tx = currentCaseData.transactions.find(t => t.id === txId);
+            if (!tx) return;
+            selectedTx = tx;
+
+            document.querySelectorAll('#txTableBody tr').forEach(r => r.classList.remove('selected'));
+            const selRow = document.getElementById("row_" + txId);
+            if (selRow) selRow.classList.add('selected');
+
+            document.getElementById('lblBboxCoords').innerText = `[X: ${tx.bounding_box.x}, Y: ${tx.bounding_box.y}, W: ${tx.bounding_box.width}, H: ${tx.bounding_box.height}]`;
+            document.getElementById('lblRawOcr').innerText = tx.raw_ocr_text;
+
+            if (tx.image_crop_path) {
+                const cropRelPath = tx.image_crop_path.replace(/\\\\/g, '/').split('output/')[1];
+                document.getElementById('cropImg').src = "/output/" + (cropRelPath || "");
+            }
+
+            // Draw on canvas
+            const canvas = document.getElementById('docCanvas');
+            const ctx = canvas.getContext('2d');
+            const docStem = currentCaseData.documents[0].replace('.pdf', '');
+            const pageImgUrl = `/output/pages/${docStem}_p${tx.page}_300dpi.png`;
+
+            docImage.onload = function() {
+                canvas.width = docImage.naturalWidth;
+                canvas.height = docImage.naturalHeight;
+                ctx.drawImage(docImage, 0, 0);
+
+                // Highlight selected bounding box with forensic reticle
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(tx.bounding_box.x, tx.bounding_box.y, tx.bounding_box.width, tx.bounding_box.height);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+                ctx.fillRect(tx.bounding_box.x, tx.bounding_box.y, tx.bounding_box.width, tx.bounding_box.height);
+            };
+            docImage.src = pageImgUrl;
+        }
+
+        function renderAnomalies(anoms) {
+            const container = document.getElementById('anomaliesContainer');
+            if (anoms.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Nessuna anomalia riscontrata.</div>`;
+                return;
+            }
+            container.innerHTML = anoms.map(a => `
+                <div class="anomaly-card ${a.severity}">
+                    <div class="anomaly-title">
+                        <span>${a.title}</span>
+                        <span class="badge" style="background: rgba(239,68,68,0.2); color: #f87171;">${a.severity}</span>
+                    </div>
+                    <div class="anomaly-desc">${a.description}</div>
+                    <div class="anomaly-action">
+                        <strong>Valutazione Forense:</strong> ${a.explanation}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderLegal(hyps) {
+            const container = document.getElementById('legalContainer');
+            if (hyps.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Nessun profilo giuridico identificato.</div>`;
+                return;
+            }
+            container.innerHTML = hyps.map(h => `
+                <div class="anomaly-card" style="border-left-color: var(--accent);">
+                    <div class="anomaly-title">
+                        <span>${h.article} - ${h.norm_title}</span>
+                        <span class="badge">${h.confidence_degree}</span>
+                    </div>
+                    <div class="anomaly-desc">${h.forensic_notes}</div>
+                    <div style="font-size: 11px; margin-top: 6px;">
+                        <strong>Fatti Rilevati:</strong>
+                        <ul style="margin-left: 18px; margin-top: 4px;">
+                            ${h.facts_found.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRequests(reqs) {
+            const container = document.getElementById('requestsContainer');
+            if (reqs.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Nessuna richiesta necessaria.</div>`;
+                return;
+            }
+            container.innerHTML = reqs.map(r => `
+                <div class="anomaly-card" style="border-left-color: #38bdf8;">
+                    <div class="anomaly-title">
+                        <span>[${r.priority}] ${r.document_name}</span>
+                        <span class="badge">${r.legal_basis}</span>
+                    </div>
+                    <div class="anomaly-desc"><strong>Soggetto Detentore:</strong> ${r.subject_holder}</div>
+                    <div class="anomaly-desc"><strong>Finalità / Fatto da Provare:</strong> ${r.fact_to_prove}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadReportMarkdown() {
+            try {
+                const resp = await fetch('/api/report/markdown');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById('reportContainer').innerText = data.markdown;
+                }
+            } catch (e) {}
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function filterTransactions() {
+            const q = document.getElementById('txtSearch').value.toLowerCase();
+            const ch = document.getElementById('selChannelFilter').value;
+            if (!currentCaseData) return;
+
+            const filtered = currentCaseData.transactions.filter(t => {
+                const matchQ = t.description.toLowerCase().includes(q) || 
+                               (t.date_accounting && t.date_accounting.includes(q)) ||
+                               (t.amount_debit && t.amount_debit.toString().includes(q)) ||
+                               (t.amount_credit && t.amount_credit.toString().includes(q));
+                const matchCh = (ch === "ALL") || (t.channel === ch) || (t.transaction_type === ch);
+                return matchQ && matchCh;
+            });
+            renderTable(filtered);
+        }
+
+        function openCorrectionModal() {
+            if (!selectedTx) return;
+            document.getElementById('correctionModal').style.display = 'flex';
+        }
+        function closeCorrectionModal() {
+            document.getElementById('correctionModal').style.display = 'none';
+        }
+
+        async function submitCorrection() {
+            if (!selectedTx) return;
+            const field = document.getElementById('corrField').value;
+            const val = document.getElementById('corrValue').value;
+            const reason = document.getElementById('corrReason').value;
+
+            const payload = {
+                transaction_id: selectedTx.id,
+                field_name: field,
+                new_value: (field.includes('amount') || field === 'balance') ? parseFloat(val) : val,
+                reason: reason
+            };
+
+            const resp = await fetch('/api/correct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                closeCorrectionModal();
+                alert("Correzione registrata con successo nell'Audit Trail!");
+                // refresh case
+                const caseResp = await fetch('/api/current_case');
+                currentCaseData = await caseResp.json();
+                renderCase(currentCaseData);
+            }
+        }
+
+        function downloadReport() {
+            const text = document.getElementById('reportContainer').innerText;
+            const blob = new Blob([text], { type: 'text/markdown' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'Perizia_Tecnica_Forense.md';
+            a.click();
+        }
+    </script>
+</body>
+</html>

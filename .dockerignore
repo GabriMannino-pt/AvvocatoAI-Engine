@@ -1,0 +1,10 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+fascicoli/
+private_cases_local/
+output/
+*.db
+.env
